@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { useState } from "react"
 import axios from "axios"
+import { Check, X, Pencil, Search } from "lucide-react"
 
 import { Activity, ActivityCategory } from "@/components/types"
 
@@ -39,10 +40,24 @@ export function ActivitiesList({
     const [categoryId, setCategoryId] = useState<string>("")
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+    // Edit state
+    const [editingId, setEditingId] = useState<number | null>(null)
+    const [editName, setEditName] = useState("")
+    const [editDuration, setEditDuration] = useState<number>(0)
+    const [editCategoryId, setEditCategoryId] = useState<string>("")
+
+    // Search state
+    const [searchQuery, setSearchQuery] = useState("")
+
     const getCategoryName = (categoryId: number): string => {
         const category = activityCategories.find(cat => cat.id === categoryId)
         return category ? category.name : "Unknown"
     }
+
+    // Filter activities based on search query
+    const filteredActivities = activities.filter(activity =>
+        activity.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -79,6 +94,48 @@ export function ActivitiesList({
             console.error("Could not add activity:", error)
         } finally {
             setIsSubmitting(false)
+        }
+    }
+
+    const handleEditClick = (activity: Activity) => {
+        setEditingId(activity.id)
+        setEditName(activity.name)
+        setEditDuration(activity.duration)
+        setEditCategoryId(activity.category_id.toString())
+    }
+
+    const handleCancelEdit = () => {
+        setEditingId(null)
+        setEditName("")
+        setEditDuration(0)
+        setEditCategoryId("")
+    }
+
+    const handleSaveEdit = async (activityId: number) => {
+        if (!editName || !editCategoryId || editDuration <= 0) {
+            return
+        }
+
+        try {
+            const token = localStorage.getItem("access_token")
+            await axios.put(
+                `${serverApiUrl}/activities/${activityId}`,
+                {
+                    name: editName,
+                    duration: editDuration,
+                    category_id: Number(editCategoryId)
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            )
+
+            setEditingId(null)
+            onActivityAdded() // Refresh the list
+        } catch (error) {
+            console.error("Could not update activity:", error)
         }
     }
 
@@ -134,10 +191,22 @@ export function ActivitiesList({
                     </Button>
                 </form>
 
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="text"
+                        placeholder="Search activities by name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                    />
+                </div>
+
                 {/* Activities Table */}
-                {activities.length === 0 ? (
+                {filteredActivities.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                        No activities found
+                        {searchQuery ? "No activities found matching your search" : "No activities found"}
                     </p>
                 ) : (
                     <Table>
@@ -146,14 +215,83 @@ export function ActivitiesList({
                                 <TableHead>Name</TableHead>
                                 <TableHead>Category</TableHead>
                                 <TableHead>Duration</TableHead>
+                                <TableHead className="w-[100px]">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {activities.map((activity) => (
+                            {filteredActivities.map((activity) => (
                                 <TableRow key={activity.id}>
-                                    <TableCell>{activity.name}</TableCell>
-                                    <TableCell>{getCategoryName(activity.category_id)}</TableCell>
-                                    <TableCell>{activity.duration} min</TableCell>
+                                    {editingId === activity.id ? (
+                                        <>
+                                            <TableCell>
+                                                <Input
+                                                    type="text"
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    className="h-8"
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Select value={editCategoryId} onValueChange={setEditCategoryId}>
+                                                    <SelectTrigger className="h-8">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {activityCategories.map((category) => (
+                                                            <SelectItem key={category.id} value={category.id.toString()}>
+                                                                {category.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    value={editDuration}
+                                                    onChange={(e) => setEditDuration(Number(e.target.value))}
+                                                    className="h-8 w-24"
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-8 w-8"
+                                                        onClick={() => handleSaveEdit(activity.id)}
+                                                    >
+                                                        <Check className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-8 w-8"
+                                                        onClick={handleCancelEdit}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <TableCell>{activity.name}</TableCell>
+                                            <TableCell>{getCategoryName(activity.category_id)}</TableCell>
+                                            <TableCell>{activity.duration} min</TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8"
+                                                    onClick={() => handleEditClick(activity)}
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </>
+                                    )}
                                 </TableRow>
                             ))}
                         </TableBody>

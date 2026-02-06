@@ -42,14 +42,15 @@ def get_activity(
             status_code=status.HTTP_404_NOT_FOUND, detail=e.message
         )
 
-@router.put("/me/", response_model=schemas.ActivityBase)
+@router.put("/{activity_id}", response_model=schemas.ActivityBase)
 def update_activity(
     db: SessionDep,
     activity_update: schemas.ActivityUpdate,
+    activity_id: int,
     daily_report: DailyReport = Depends(get_current_daily_report),
 ):
     try:
-        return crud.update_activity(db=db, daily_report=daily_report, activity_update=activity_update)
+        return crud.update_activity(db=db, daily_report=daily_report, activity_id=activity_id, activity_update=activity_update)
     except ActivityNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=e.message

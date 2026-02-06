@@ -29,8 +29,8 @@ def get_activities(db: Session):
     return db.query(Activity).all()
 
 
-def update_activity(*, db: Session, daily_report: DailyReport, activity_update: ActivityUpdate):
-    db_activity = db.query(Activity).filter(Activity.daily_report_id == daily_report.id, Activity.id == activity_update.id).first()
+def update_activity(*, db: Session, daily_report: DailyReport, activity_id: int, activity_update: ActivityUpdate):
+    db_activity = db.query(Activity).filter(Activity.id == activity_id).first()
     if not db_activity:
         raise ActivityNotFoundException(activity_update.id)
     if activity_update.name is not None:

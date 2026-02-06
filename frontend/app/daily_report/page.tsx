@@ -20,6 +20,7 @@ import { SERVER_API_URL } from "@/next.config"
 import { MoodSelector } from "@/components/MoodSelector"
 import { SleepCard } from "@/components/SleepCard"
 import { ActivitiesList } from "@/components/ActivityTableView"
+import { NavBar } from "@/components/NavBar"
 
 export default function DailyReport() {
     const [activityCategories, setActivityCategories] = useState<ActivityCategory[]>([])
@@ -123,9 +124,7 @@ export default function DailyReport() {
 
     return (
         <div>
-            <h1 className="text-center text-xl md:text-5xl font-bold tracking-tight text-blue-900">
-                Health-Log
-            </h1>
+            <NavBar />
 
             <div className="grid grid-cols-2">
                 <MoodSelector
